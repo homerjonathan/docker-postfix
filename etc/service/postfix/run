@@ -1,5 +1,10 @@
 #!/bin/bash -e
 
+# Fix Dovecot first
+          
+sed -i "s+SMTPD_TLS_CERT_FILE+"$SMTPD_TLS_CERT_FILE"+g" /etc/dovecot/conf.d/10-ssl.conf
+sed -i "s+SMTPD_TLS_KEY_FILE+"$SMTPD_TLS_KEY_FILE"+g"  /etc/dovecot/conf.d/10-ssl.conf
+
 # Do we want to modify the config first with the script?
 [ -f /etc/service/postfix/run.config ] && source /etc/service/postfix/run.config
 
@@ -21,6 +26,37 @@ if [ "$ROOT_ALIAS" ]; then
   echo "root: $ROOT_ALIAS" >> /etc/aliases
   newaliases
 fi
+
+# Certificates from LetsEncrypt
+
+if [ "$SMTPD_TLS_CERT_FILE" ]; then
+ postconf -e smtpd_tls_cert_file="$SMTPD_TLS_CERT_FILE"
+fi
+if [ "$SMTPD_TLS_KEY_FILE" ]; then
+ postconf -e smtpd_tls_key_file="$SMTPD_TLS_KEY_FILE"
+fi
+
+# More secure SSL security and TLS
+
+# Defaults to higher security.  You can disable whilst testing etc.  
+if [ "$SECURE" == "True"]; then
+  postconf -e 'smtpd_helo_required = yes'
+  postconf -e 'smtpd_helo_restrictions = reject_non_fqdn_helo_hostname,reject_invalid_helo_hostname,reject_unknown_helo_hostname'
+  postconf -e 'smtpd_recipient_restrictions = permit_sasl_authenticated,permit_mynetworks,reject_unauth_destination'
+  postconf -e 'disable_vrfy_command = yes'
+  postconf -e 'smtpd_delay_reject = yes'
+fi
+postconf -e 'smtpd_sasl_type = dovecot'
+postconf -e 'smtpd_sasl_path = private/auth'
+postconf -e 'smtpd_sasl_local_domain ='
+postconf -e 'smtpd_sasl_security_options = noanonymous'
+postconf -e 'broken_sasl_auth_clients = yes'
+postconf -e 'smtpd_sasl_auth_enable = yes'
+postconf -e 'smtp_tls_security_level = may'
+postconf -e 'smtpd_tls_security_level = may'
+postconf -e 'smtp_tls_note_starttls_offer = yes'
+postconf -e 'smtpd_tls_loglevel = 1'
+postconf -e 'smtpd_tls_received_header = yes'
 
 # We have to start and stop postfix first through init.d to populate
 # postfix spool directory for chroot in which postfix is running.

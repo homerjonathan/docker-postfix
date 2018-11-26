@@ -1,4 +1,4 @@
-FROM tozd/runit:alpine-38
+FROM alpine:3.8
 
 EXPOSE 25/tcp 465/tcp 587/tcp
 
@@ -9,12 +9,16 @@ ENV MAILNAME mail.example.com
 ENV MY_NETWORKS 172.17.0.0/16 127.0.0.0/8
 ENV MY_DESTINATION localhost.localdomain, localhost
 ENV ROOT_ALIAS admin@example.com
+ENV SMTPD_TLS_CERT_FILE /etc/letsencrypt/production/example.com/fullchain.pem
+ENV SMTPD_TLS_KEY_FILE /etc/letsencrypt/production/example.com/privkey.pem
+ENV SECURE true
 
 # /etc/aliases should be available at postfix installation.
 COPY ./etc/aliases /etc/aliases
 
 RUN apk update && \
  apk add postfix postfix-pcre rsyslog sed && \
+ apk add dovecot && \
  addgroup -S syslog && \
  adduser -S -G syslog syslog
 
