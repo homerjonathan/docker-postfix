@@ -1,0 +1,8 @@
+#!/bin/bash -e
+
+# Fix Dovecot Certificates
+          
+sed -i "s+SMTPD_TLS_CERT_FILE+"$SMTPD_TLS_CERT_FILE"+g" /etc/dovecot/conf.d/10-ssl.conf
+sed -i "s+SMTPD_TLS_KEY_FILE+"$SMTPD_TLS_KEY_FILE"+g"  /etc/dovecot/conf.d/10-ssl.conf
+
+exec /usr/sbin/dovecot 
